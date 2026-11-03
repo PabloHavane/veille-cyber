@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>veille-cyber – flux d'exemple</title>
+  </head>
+  <body>
+    <outline text="CERT-FR">
+      <outline type="rss" text="CERT-FR – Alertes" xmlUrl="https://cert.ssi.gouv.fr/alerte/feed/"/>
+      <outline type="rss" text="CERT-FR – Menaces et incidents" xmlUrl="https://cert.ssi.gouv.fr/cti/feed/"/>
+      <outline type="rss" text="CERT-FR – Bulletins d'actualité" xmlUrl="https://cert.ssi.gouv.fr/actualite/feed/"/>
+    </outline>
+    <outline text="Actu">
+      <outline type="rss" text="BleepingComputer" xmlUrl="https://www.bleepingcomputer.com/feed/"/>
+      <outline type="rss" text="The Hacker News" xmlUrl="https://feeds.feedburner.com/TheHackersNews"/>
+      <outline type="rss" text="Krebs on Security" xmlUrl="https://krebsonsecurity.com/feed/"/>
+      <outline type="rss" text="The Record" xmlUrl="https://therecord.media/feed"/>
+    </outline>
+    <outline text="Gouv. US">
+      <outline type="rss" text="CISA – Tous les avis" xmlUrl="https://www.cisa.gov/cybersecurity-advisories/all.xml"/>
+    </outline>
+  </body>
+</opml>
