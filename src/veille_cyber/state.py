@@ -15,6 +15,11 @@ def load(path: Path) -> tuple[str | None, dict[str, Item]]:
     if not path.exists():
         return None, {}
     data = json.loads(path.read_text(encoding="utf-8"))
+    version = data.get("version")
+    if version != STATE_VERSION:
+        # On refuse plutôt que d'écraser un état qu'on ne sait pas lire.
+        raise ValueError(f"{path} : version d'état {version!r} non prise en charge "
+                         f"(attendue : {STATE_VERSION})")
     items = {k: Item(**v) for k, v in data.get("items", {}).items()}
     return data.get("last_success"), items
 
