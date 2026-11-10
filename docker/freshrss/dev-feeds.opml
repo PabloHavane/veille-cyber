@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>veille-cyber – dev</title>
+  </head>
+  <body>
+    <outline text="veille-cyber">
+      <outline type="rss" text="veille-cyber — CVE prioritaires" xmlUrl="http://feed:8000/feed.xml"/>
+    </outline>
+  </body>
+</opml>

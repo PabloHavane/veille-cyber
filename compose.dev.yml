@@ -1,33 +1,40 @@
 # Environnement de dev, isolé de la prod (projet compose distinct).
-#   docker compose -f compose.dev.yml up -d
-#   docker compose -f compose.dev.yml run --rm python python -m veille_cyber run --data-dir /app/.dev-data
-# Dans FreshRSS (http://127.0.0.1:8088), s'abonner à http://feed:8000/feed/feed.xml
+# Mode d'emploi : section « Développement avec Docker » du README.
 name: veille-cyber-dev
 
 services:
+  # FreshRSS préinstallé (sans mot de passe) et abonné au flux du service `feed`.
+  # Image construite depuis docker/freshrss/.
   freshrss:
-    image: freshrss/freshrss:${FRESHRSS_TAG:-latest}
+    build:
+      context: ./docker/freshrss
+      args:
+        FRESHRSS_TAG: ${FRESHRSS_TAG:-latest}
+    image: veille-cyber-freshrss-dev:local
     logging:
       options:
         max-size: 10m
     ports:
       - "127.0.0.1:8088:80"
+    depends_on:
+      - feed
 
-  # Sert le flux généré à FreshRSS, sur le réseau interne uniquement.
+  # Sert le flux généré à FreshRSS (http://feed:8000/feed.xml) ;
+  # aussi visible depuis l'hôte sur http://127.0.0.1:8000/feed.xml.
   feed:
     image: python:3.15-slim
     command: python -m http.server 8000 --directory /data
+    ports:
+      - "127.0.0.1:8000:8000"
     volumes:
-      - ./.dev-data:/data:ro,z
+      - ./.dev-data/feed:/data:ro,z
 
   # Outil ponctuel : lancé via `run --rm`, jamais démarré par `up`.
+  # Image construite depuis docker/python/ (Python + pytest).
   python:
-    image: python:3.15-slim
+    build: ./docker/python
+    image: veille-cyber-dev:local
     profiles: [tools]
     user: "${UID:-1000}:${GID:-1000}"
-    working_dir: /app
-    environment:
-      PYTHONPATH: /app/src
-      PYTHONDONTWRITEBYTECODE: "1"
     volumes:
       - .:/app:z
