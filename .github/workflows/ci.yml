@@ -8,6 +8,17 @@ permissions:
   contents: read
 
 jobs:
+  tests:
+    name: Tests Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install -e '.[test]'
+      - run: pytest
+
   secrets:
     name: Scan de secrets (gitleaks)
     runs-on: ubuntu-latest
