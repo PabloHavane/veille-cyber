@@ -39,5 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: docker compose config
+      - name: docker compose config (prod)
         run: docker compose --env-file .env.example config --quiet
+      - name: docker compose config (dev)
+        run: docker compose -f compose.dev.yml --env-file .env.example config --quiet
