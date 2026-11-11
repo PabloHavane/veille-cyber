@@ -8,9 +8,10 @@ FROM freshrss/freshrss:${FRESHRSS_TAG}
 #   FreshRSS (SQLite, sans mot de passe) et crée l'utilisateur. Sans effet si déjà fait.
 # - INTERNAL_HOST_ALLOWLIST : FreshRSS refuse par défaut les hôtes privés (anti-SSRF),
 #   on autorise uniquement le service `feed` du compose de dev.
-# - CRON_MIN : rafraîchissement des flux toutes les 5 minutes.
+# - CRON_MIN + --feed-ttl-default 300 : chaque flux est relu au plus 5 minutes après
+#   sa dernière lecture (par défaut FreshRSS attend 1 h, même si le cron passe avant).
 ENV FRESHRSS_INSTALL="--default-user admin --auth-type none --language fr --db-type sqlite --base-url http://127.0.0.1:8088" \
-    FRESHRSS_USER="--user admin --language fr --no-default-feeds" \
+    FRESHRSS_USER="--user admin --language fr --no-default-feeds --feed-ttl-default 300" \
     INTERNAL_HOST_ALLOWLIST="feed:8000" \
     CRON_MIN="*/5"
 

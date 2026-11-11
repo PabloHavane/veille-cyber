@@ -14,7 +14,51 @@ services:
     environment:
       TZ: ${TZ}
       CRON_MIN: ${CRON_MIN}
+      # FreshRSS bloque les hôtes privés (anti-SSRF) : on autorise uniquement le flux interne.
+      INTERNAL_HOST_ALLOWLIST: feed:8000
+    depends_on:
+      - feed
+
+  # Pipeline de collecte : un run au démarrage, puis toutes les COLLECT_INTERVAL_HOURS.
+  # Image construite automatiquement par `docker compose up` depuis docker/collector/.
+  collector:
+    build:
+      context: .
+      dockerfile: docker/collector/Dockerfile
+    image: veille-cyber-collector:local
+    restart: always
+    logging:
+      options:
+        max-size: 10m
+    command: ["loop", "--data-dir", "/data", "--interval-hours", "${COLLECT_INTERVAL_HOURS:-6}"]
+    stop_signal: SIGINT
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - pipeline:/data
+
+  # Sert le flux à FreshRSS sur le réseau interne (http://feed:8000/feed.xml),
+  # sans port publié sur l'hôte. Seul le dossier feed/ est servi, pas state.json.
+  feed:
+    image: python:3.15-slim
+    restart: always
+    logging:
+      options:
+        max-size: 10m
+    command: ["python", "-m", "http.server", "8000", "--directory", "/data/feed"]
+    user: "65534:65534"
+    stop_signal: SIGINT
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - pipeline:/data:ro
+    # Le collector doit créer le volume en premier, pour qu'il hérite des droits de son image.
+    depends_on:
+      - collector
 
 volumes:
   data:
   extensions:
+  pipeline:
