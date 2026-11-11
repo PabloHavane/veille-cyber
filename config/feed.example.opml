@@ -4,6 +4,9 @@
     <title>veille-cyber – flux d'exemple</title>
   </head>
   <body>
+    <outline text="veille-cyber">
+      <outline type="rss" text="veille-cyber — CVE prioritaires" xmlUrl="http://feed:8000/feed.xml"/>
+    </outline>
     <outline text="CERT-FR">
       <outline type="rss" text="CERT-FR – Alertes" xmlUrl="https://cert.ssi.gouv.fr/alerte/feed/"/>
       <outline type="rss" text="CERT-FR – Menaces et incidents" xmlUrl="https://cert.ssi.gouv.fr/cti/feed/"/>

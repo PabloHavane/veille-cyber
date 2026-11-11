@@ -43,3 +43,5 @@ jobs:
         run: docker compose --env-file .env.example config --quiet
       - name: docker compose config (dev)
         run: docker compose -f compose.dev.yml --env-file .env.example config --quiet
+      - name: build de l'image collector (prod)
+        run: docker compose --env-file .env.example build collector
