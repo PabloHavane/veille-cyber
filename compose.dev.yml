@@ -1,0 +1,63 @@
+# Environnement de dev, isolé de la prod (projet compose distinct).
+# Mode d'emploi : section « Développement avec Docker » du README.
+name: veille-cyber-dev
+
+services:
+  # FreshRSS préinstallé (sans mot de passe) et abonné au flux du service `feed`.
+  # Image construite depuis docker/freshrss/.
+  freshrss:
+    build:
+      context: ./docker/freshrss
+      args:
+        FRESHRSS_TAG: ${FRESHRSS_TAG:-latest}
+    image: veille-cyber-freshrss-dev:local
+    logging:
+      options:
+        max-size: 10m
+    ports:
+      - "127.0.0.1:8088:80"
+    depends_on:
+      - feed
+
+  # Collecte automatique, comme en prod : même image (docker/collector/), mêmes
+  # restrictions. Différences : écrit dans .dev-data/ avec ton UID, code monté
+  # depuis src/ (un `restart collector` suffit après une modif), intervalle court.
+  collector:
+    build:
+      context: .
+      dockerfile: docker/collector/Dockerfile
+    image: veille-cyber-collector-dev:local
+    command: ["loop", "--data-dir", "/data",
+              "--interval-hours", "${DEV_COLLECT_INTERVAL_HOURS:-1}",
+              "--retry-minutes", "${DEV_COLLECT_RETRY_MINUTES:-5}"]
+    user: "${UID:-1000}:${GID:-1000}"
+    stop_signal: SIGINT
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging:
+      options:
+        max-size: 10m
+    volumes:
+      - ./.dev-data:/data:z
+      - ./src/veille_cyber:/opt/veille-cyber/veille_cyber:ro,z
+
+  # Sert le flux généré à FreshRSS (http://feed:8000/feed.xml) ;
+  # aussi visible depuis l'hôte sur http://127.0.0.1:8000/feed.xml.
+  feed:
+    image: python:3.15-slim
+    command: python -m http.server 8000 --directory /data
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./.dev-data/feed:/data:ro,z
+
+  # Outil ponctuel : lancé via `run --rm`, jamais démarré par `up`.
+  # Image construite depuis docker/python/ (Python + pytest).
+  python:
+    build: ./docker/python
+    image: veille-cyber-dev:local
+    profiles: [tools]
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - .:/app:z

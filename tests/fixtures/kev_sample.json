@@ -1,0 +1,17 @@
+{
+  "title": "CISA Catalog of Known Exploited Vulnerabilities",
+  "catalogVersion": "2026.11.03",
+  "dateReleased": "2026-11-03T17:00:00.0000Z",
+  "count": 3,
+  "vulnerabilities": [
+    {"cveID": "CVE-2026-0003", "vendorProject": "Exemple", "product": "Passerelle VPN",
+     "vulnerabilityName": "Exemple Passerelle VPN Missing Authentication", "dateAdded": "2026-11-03",
+     "shortDescription": "Description fictive pour les tests.", "knownRansomwareCampaignUse": "Known"},
+    {"cveID": "CVE-2026-0002", "vendorProject": "Exemple", "product": "Serveur Web",
+     "vulnerabilityName": "Exemple Serveur Web Path Traversal", "dateAdded": "2026-11-01",
+     "shortDescription": "Description fictive pour les tests.", "knownRansomwareCampaignUse": "Unknown"},
+    {"cveID": "CVE-2026-0001", "vendorProject": "Exemple", "product": "Ancien Produit",
+     "vulnerabilityName": "Exemple Ancien Produit RCE", "dateAdded": "2026-10-01",
+     "shortDescription": "Description fictive pour les tests.", "knownRansomwareCampaignUse": "Unknown"}
+  ]
+}

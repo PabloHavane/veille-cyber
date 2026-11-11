@@ -1,0 +1,6 @@
+# Contexte de build de docker/collector/ : on n'envoie que le nécessaire
+# (et surtout jamais .env, .git ni .dev-data).
+*
+!docker/collector/
+!src/
+**/__pycache__

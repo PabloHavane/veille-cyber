@@ -8,6 +8,17 @@ permissions:
   contents: read
 
 jobs:
+  tests:
+    name: Tests Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: pip install -e '.[test]'
+      - run: pytest
+
   secrets:
     name: Scan de secrets (gitleaks)
     runs-on: ubuntu-latest
@@ -28,5 +39,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: docker compose config
+      - name: docker compose config (prod)
         run: docker compose --env-file .env.example config --quiet
+      - name: docker compose config (dev)
+        run: docker compose -f compose.dev.yml --env-file .env.example config --quiet
+      - name: build de l'image collector (prod)
+        run: docker compose --env-file .env.example build collector
