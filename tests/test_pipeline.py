@@ -1,3 +1,4 @@
+import argparse
 import json
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timezone
@@ -6,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from veille_cyber import feed, state
-from veille_cyber.__main__ import main
+from veille_cyber.__main__ import loop, main
 from veille_cyber.items import Item, merge, prune
 from veille_cyber.sources import kev
 
@@ -120,3 +121,52 @@ def test_cli_run_prunes_state(tmp_path):
     _, items = state.load(tmp_path / "state.json")
     assert "CVE-2020-0001" not in items
     assert "CVE-2026-0003" in items
+
+
+class StopLoop:
+    """Faux sleep : enregistre les délais et interrompt la boucle après n appels."""
+
+    def __init__(self, n):
+        self.n, self.delays = n, []
+
+    def __call__(self, delay):
+        self.delays.append(delay)
+        if len(self.delays) >= self.n:
+            raise KeyboardInterrupt
+
+
+def loop_args(tmp_path, kev_file, **overrides):
+    args = argparse.Namespace(data_dir=tmp_path, initial_days=100000, max_entries=200,
+                              retention_days=90, kev_file=kev_file,
+                              interval_hours=6, retry_minutes=30)
+    for key, value in overrides.items():
+        setattr(args, key, value)
+    return args
+
+
+def test_loop_runs_then_waits_interval(tmp_path):
+    sleep = StopLoop(2)
+    assert loop(loop_args(tmp_path, FIXTURE), sleep=sleep) == 0
+    assert sleep.delays == [6 * 3600, 6 * 3600]
+    assert (tmp_path / "feed" / "feed.xml").exists()
+
+
+def test_loop_survives_failure_and_retries_sooner(tmp_path, caplog):
+    sleep = StopLoop(2)
+    bad = tmp_path / "absent.json"
+    assert loop(loop_args(tmp_path, bad), sleep=sleep) == 0
+    assert sleep.delays == [30 * 60, 30 * 60]
+    assert "échec de la collecte" in caplog.text
+    assert not (tmp_path / "state.json").exists()
+
+
+def test_loop_retry_never_exceeds_interval(tmp_path):
+    sleep = StopLoop(1)
+    loop(loop_args(tmp_path, tmp_path / "absent.json", interval_hours=0.25), sleep=sleep)
+    assert sleep.delays == [0.25 * 3600]
+
+
+@pytest.mark.parametrize("value", ["0", "-1"])
+def test_cli_loop_rejects_non_positive_interval(value):
+    with pytest.raises(SystemExit):
+        main(["loop", "--interval-hours", value])

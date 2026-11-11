@@ -1,4 +1,4 @@
-"""Point d'entrée : python -m veille_cyber run"""
+"""Point d'entrée : python -m veille_cyber run | loop"""
 from __future__ import annotations
 
 import argparse
@@ -6,6 +6,8 @@ import json
 import logging
 import os
 import sys
+import time
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -14,6 +16,8 @@ from .items import merge, prune
 from .sources import kev
 
 DEFAULT_DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "veille-cyber"
+
+log = logging.getLogger("veille_cyber")
 
 
 def run(args: argparse.Namespace) -> int:
@@ -43,20 +47,57 @@ def run(args: argparse.Namespace) -> int:
     return 0
 
 
+def loop(args: argparse.Namespace, sleep: Callable[[float], None] = time.sleep) -> int:
+    """Exécute run() indéfiniment : un premier run immédiat, puis toutes les interval_hours.
+    Un échec est journalisé puis retenté après retry_minutes, sans arrêter la boucle."""
+    interval = args.interval_hours * 3600
+    retry = min(args.retry_minutes * 60, interval)
+    log.info("collecte automatique toutes les %g h (nouvel essai %g min après un échec)",
+             args.interval_hours, retry / 60)
+    try:
+        while True:
+            try:
+                run(args)
+                delay = interval
+            except Exception:
+                log.exception("échec de la collecte, nouvel essai dans %g min", retry / 60)
+                delay = retry
+            sleep(delay)
+    except KeyboardInterrupt:  # SIGINT : signal d'arrêt du conteneur (stop_signal)
+        log.info("arrêt demandé")
+        return 0
+
+
+def _positive(cast: Callable[[str], float]) -> Callable[[str], float]:
+    def parse(value: str) -> float:
+        number = cast(value)
+        if number <= 0:
+            raise argparse.ArgumentTypeError(f"doit être strictement positif : {value}")
+        return number
+    return parse
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="veille_cyber")
     sub = parser.add_subparsers(dest="command", required=True)
-    p_run = sub.add_parser("run", help="collecte, sélection et génération du flux")
-    p_run.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
-    p_run.add_argument("--initial-days", type=int, default=7,
-                       help="fenêtre de la toute première exécution (jours)")
-    p_run.add_argument("--max-entries", type=int, default=200)
-    p_run.add_argument("--retention-days", type=int, default=90,
-                       help="purge de l'état les CVE non modifiées depuis N jours (0 = jamais)")
-    p_run.add_argument("--kev-file", type=Path, help="catalogue KEV local (hors ligne)")
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
+    common.add_argument("--initial-days", type=int, default=7,
+                        help="fenêtre de la toute première exécution (jours)")
+    common.add_argument("--max-entries", type=int, default=200)
+    common.add_argument("--retention-days", type=int, default=90,
+                        help="purge de l'état les CVE non modifiées depuis N jours (0 = jamais)")
+    common.add_argument("--kev-file", type=Path, help="catalogue KEV local (hors ligne)")
+    sub.add_parser("run", parents=[common], help="collecte, sélection et génération du flux")
+    p_loop = sub.add_parser("loop", parents=[common], help="exécute run à intervalle régulier")
+    p_loop.add_argument("--interval-hours", type=_positive(float), default=6,
+                        help="intervalle entre deux collectes réussies (heures)")
+    p_loop.add_argument("--retry-minutes", type=_positive(float), default=30,
+                        help="délai avant un nouvel essai après un échec (minutes)")
     args = parser.parse_args(argv)
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-    return run(args)
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    return loop(args) if args.command == "loop" else run(args)
 
 
 if __name__ == "__main__":
